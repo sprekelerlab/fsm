@@ -1,4 +1,5 @@
 var greekLetterNames = [ 'Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta', 'Iota', 'Kappa', 'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron', 'Pi', 'Rho', 'Sigma', 'Tau', 'Upsilon', 'Phi', 'Chi', 'Psi', 'Omega' ];
+var squareSymbolNames = [ 'Blank', 'Square' ];
 
 function convertLatexShortcuts(text) {
 	// html greek characters
@@ -6,6 +7,13 @@ function convertLatexShortcuts(text) {
 		var name = greekLetterNames[i];
 		text = text.replace(new RegExp('\\\\' + name, 'g'), String.fromCharCode(913 + i + (i > 16)));
 		text = text.replace(new RegExp('\\\\' + name.toLowerCase(), 'g'), String.fromCharCode(945 + i + (i > 16)));
+	}
+
+	// blank/square symbol
+	for(var i = 0; i < squareSymbolNames.length; i++) {
+		var name = squareSymbolNames[i];
+		text = text.replace(new RegExp('\\\\' + name, 'g'), String.fromCharCode(9633));
+		text = text.replace(new RegExp('\\\\' + name.toLowerCase(), 'g'), String.fromCharCode(9633));
 	}
 
 	// subscripts

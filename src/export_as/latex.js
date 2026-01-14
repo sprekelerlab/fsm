@@ -81,6 +81,7 @@ function ExportAsLaTeX() {
 	};
 	this.advancedFillText = function(text, originalText, x, y, angleOrNull) {
 		if(text.replace(' ', '').length > 0) {
+			originalText = originalText.replace(/\\blank/g, '\\square');
 			var nodeParams = '';
 			// x and y start off as the center of the text, but will be moved to one side of the box when angleOrNull != null
 			if(angleOrNull != null) {
