@@ -47,7 +47,15 @@ function canvasHasFocus() {
 function drawText(c, originalText, x, y, angleOrNull, isSelected) {
 	text = convertLatexShortcuts(originalText);
 	c.font = '20px "Times New Roman", serif';
-	var width = c.measureText(text).width;
+	var lines = text.split('\n');
+	var widths = [];
+	var width = 0;
+	for(var i = 0; i < lines.length; i++) {
+		widths[i] = c.measureText(lines[i]).width;
+		width = Math.max(width, widths[i]);
+	}
+	var lineHeight = 24;
+	var totalHeight = 20 + (lines.length - 1) * lineHeight;
 
 	// center the text
 	x -= width / 2;
@@ -57,7 +65,7 @@ function drawText(c, originalText, x, y, angleOrNull, isSelected) {
 		var cos = Math.cos(angleOrNull);
 		var sin = Math.sin(angleOrNull);
 		var cornerPointX = (width / 2 + 5) * (cos > 0 ? 1 : -1);
-		var cornerPointY = (10 + 5) * (sin > 0 ? 1 : -1);
+		var cornerPointY = (totalHeight / 2 + 5) * (sin > 0 ? 1 : -1);
 		var slide = sin * Math.pow(Math.abs(sin), 40) * cornerPointX - cos * Math.pow(Math.abs(cos), 10) * cornerPointY;
 		x += cornerPointX - sin * slide;
 		y += cornerPointY + cos * slide;
@@ -69,12 +77,17 @@ function drawText(c, originalText, x, y, angleOrNull, isSelected) {
 	} else {
 		x = Math.round(x);
 		y = Math.round(y);
-		c.fillText(text, x, y + 6);
+		var baseY = y - (lines.length - 1) * lineHeight / 2;
+		for(var i = 0; i < lines.length; i++) {
+			var lineX = x + (width - widths[i]) / 2;
+			c.fillText(lines[i], lineX, baseY + i * lineHeight + 6);
+		}
 		if(isSelected && caretVisible && canvasHasFocus() && document.hasFocus()) {
-			x += width;
+			var caretX = x + (width - widths[widths.length - 1]) / 2 + widths[widths.length - 1];
+			var caretY = baseY + (lines.length - 1) * lineHeight;
 			c.beginPath();
-			c.moveTo(x, y - 10);
-			c.lineTo(x, y + 10);
+			c.moveTo(caretX, caretY - 10);
+			c.lineTo(caretX, caretY + 10);
 			c.stroke();
 		}
 	}
@@ -273,6 +286,18 @@ document.onkeydown = function(e) {
 	} else if(!canvasHasFocus()) {
 		// don't read keystrokes when other things have focus
 		return true;
+	} else if(key == 13) { // enter key
+		if(selectedObject != null && 'text' in selectedObject) {
+			if(shift) {
+				selectedObject.text += '\n';
+				resetCaret();
+				draw();
+			} else {
+				selectedObject = null;
+				draw();
+			}
+		}
+		return false;
 	} else if(key == 8) { // backspace key
 		if(selectedObject != null && 'text' in selectedObject) {
 			selectedObject.text = selectedObject.text.substr(0, selectedObject.text.length - 1);
@@ -314,6 +339,9 @@ document.onkeypress = function(e) {
 	if(!canvasHasFocus()) {
 		// don't read keystrokes when other things have focus
 		return true;
+	} else if(key == 13) {
+		// handled in keydown (Shift+Enter for newline, Enter to finish editing)
+		return false;
 	} else if(key >= 0x20 && key <= 0x7E && !e.metaKey && !e.altKey && !e.ctrlKey && selectedObject != null && 'text' in selectedObject) {
 		selectedObject.text += String.fromCharCode(key);
 		resetCaret();
