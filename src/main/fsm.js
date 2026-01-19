@@ -455,7 +455,14 @@ function renderSavedVersions() {
 		var meta = document.createElement('span');
 		meta.className = 'version-meta';
 		var savedAt = entry.lastSavedAt || entry.createdAt;
-		meta.textContent = entry.name + ' (zuletzt gespeichert: ' + formatTimestamp(savedAt) + ')';
+		var nameSpan = document.createElement('span');
+		nameSpan.className = 'version-name';
+		nameSpan.textContent = entry.name;
+		var timeSpan = document.createElement('span');
+		timeSpan.className = 'version-timestamp';
+		timeSpan.textContent = ' (zuletzt gespeichert: ' + formatTimestamp(savedAt) + ')';
+		meta.appendChild(nameSpan);
+		meta.appendChild(timeSpan);
 
 		var loadButton = document.createElement('button');
 		loadButton.className = 'version-load';
@@ -582,7 +589,18 @@ function saveAsPNG() {
 	drawUsing(canvas.getContext('2d'));
 	selectedObject = oldSelectedObject;
 	var pngData = canvas.toDataURL('image/png');
-	document.location.href = pngData;
+	var nameInput = document.getElementById('current-name');
+	var baseName = nameInput && nameInput.value ? nameInput.value : 'Automat';
+	baseName = baseName.replace(/[\\\/:*?"<>|]+/g, '_').trim();
+	if(!baseName) {
+		baseName = 'Automat';
+	}
+	var link = document.createElement('a');
+	link.href = pngData;
+	link.download = baseName + '.png';
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
 }
 
 function saveAsSVG() {

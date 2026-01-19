@@ -12,7 +12,7 @@ body {
 }
 
 h1 {
-	font: bold 32px Georgia, serif;
+	font: bold italic 36px Georgia, serif;
 	margin-bottom: 10px;
 }
 
@@ -27,7 +27,6 @@ h1 input {
 	padding: 2px 6px;
 	border: 1px solid #bbb;
 	border-radius: 6px;
-}
 }
 
 canvas {
@@ -104,6 +103,10 @@ textarea {
 	flex: 1;
 }
 
+.version-name {
+	font-weight: bold;
+}
+
 .versions-empty {
 	color: #555;
 	font-style: italic;
@@ -113,6 +116,50 @@ textarea {
 	color: #555;
 	font-size: 12px;
 	margin-top: 10px;
+}
+
+.name-block {
+	text-align: center;
+}
+
+.name-divider {
+	height: 1px;
+	background: #bbb;
+	opacity: 0.5;
+	max-width: 800px;
+	margin: 10px auto 32px;
+}
+
+.name-prompt {
+	font-size: 18px;
+	margin: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+}
+
+button {
+	background: #f0f0f0;
+	color: #222;
+	border: 1px solid #b8b8b8;
+	border-radius: 6px;
+	padding: 6px 10px;
+	cursor: pointer;
+}
+
+button:hover {
+	background: #e3e3e3;
+}
+
+.button-primary {
+	background: #2f6fd3;
+	color: #fff;
+	border: 1px solid #1f55a6;
+}
+
+.button-primary:hover {
+	background: #245bb0;
 }
 
   </style>
@@ -154,25 +201,13 @@ if (typeof btoa == 'undefined') {
 
 	</script>
 </head><body>
-	<h1><label for="current-name">Automat:</label><input id="current-name" type="text" aria-label="Automatenname"></h1>
-	<canvas id="canvas" width="800" height="600">
-		<span class="error">Your browser does not support<br>the HTML5 &lt;canvas&gt; element</span>
-	</canvas>
+	<h1>Zeichentool zum Erstellen von endlichen Automaten</h1>
 	<div>
-		<p class="center">Exportieren als: <a href="javascript:saveAsPNG()">PNG</a> | <a href="javascript:saveAsSVG()">SVG</a> | <a href="javascript:saveAsLaTeX()">LaTeX</a></p>
-		<section class="versions">
-			<h2>Gespeicherte Automaten</h2>
-			<div class="version-controls">
-				<button id="new-automaton" type="button">Neuer Automat</button>
-			</div>
-			<ul id="versions-list" class="versions-list"></ul>
-		</section>
-		<textarea id="output"></textarea>
-		<p>Dieses Automaten-Tool ist eine Erweiterung des ISIS-Tool zum Zeichnen von DFAs und NFAs, mit folgenden zusätzlichen Optionen zum Zeichnen von Kellerautomaten und Turingmaschinen:</p>
+		<p>Dieses Automaten-Tool ist eine Erweiterung des ISIS-Tools zum Zeichnen von DFAs und NFAs, mit folgenden zusätzlichen Optionen zum Zeichnen von Kellerautomaten und Turingmaschinen:</p>
 		<ul>
 			<li><b>Übergangspfeil mit mehreren Übergängen beschriften:</b> Shift + Enter um Zeilenumbruch einzufügen</li>
-			<li><b>Blank Symbol einfügen:</b> Schreiben Sie \blank (□), um das Blank-Symbol einzufügen</li>
-			<li><b>Griechische Buchstaben:</b> z.B. \lambda (λ)</li>
+			<li><b>Blank Symbol einfügen:</b> Schreiben Sie \blank, um □ einzufügen</li>
+			<li><b>Griechische Buchstaben:</b> Schreiben Sie z.B. \lambda, um λ einzufügen</li>
 		</ul>
 		<p>Hier nochmal die übrige Kurzanleitung zum Erstellen des Automaten:</p>
 		<ul>
@@ -182,10 +217,23 @@ if (typeof btoa == 'undefined') {
 			<li><b>Startpfeil hinzufügen:</b> Umschalttaste + klicken und auf gewünschten Zustand ziehen</li>
 			<li><b>Übergang hinzufügen:</b> Umschalttaste + auf Zustand klicken und auf Zielzustand ziehen</li>
 			<li><b>Übergang beschriften:</b> auf Pfeil klicken und gewünschten Text eingeben (z.B. 0 oder 1)</li>
-			<li><b>Übergangspfeil mit mehreren Übergängen beschriften:</b> Shift + Enter um Zeilenumbruch einzufügen</li>
 			<li><b>Löschen:</b> auf Pfeil/Zustand klicken und "entf"/"delete"/"backspace"/"fn+delete" klicken</li>
-			<li><b>Blank Symbol einfügen:</b> Schreiben Sie \blank (□), um das Blank-Symbol einzufügen</li>
-			<li><b>Griechische Buchstaben:</b> z.B. \lambda (λ)</li>
 		</ul>
+	</div>
+	<div class="name-block">
+		<div class="name-divider"></div>
+		<p class="name-prompt"><b>Bennen Sie Ihren Automaten:</b> <input id="current-name" type="text" aria-label="Automatenname" placeholder="Automat 1"> <button id="new-automaton" type="button">Neuer Automat<br>(speichert automatisch)</button> <button class="button-primary" type="button" onclick="saveAsPNG()">PNG herunterladen</button></p>
+	</div>
+	<canvas id="canvas" width="800" height="600">
+		<span class="error">Your browser does not support<br>the HTML5 &lt;canvas&gt; element</span>
+	</canvas>
+	<div>
+	<div>
+		<section class="versions">
+			<h2>Gespeicherte Automaten</h2>
+			<p>Ihr Automat wird automatisch gespeichert. Sie können hier einen neuen Automaten beginnen oder einen gespeicherten Automaten laden.</p>
+			<ul id="versions-list" class="versions-list"></ul>
+		</section>
+		<textarea id="output"></textarea>
 	</div>
 </body></html>
