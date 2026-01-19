@@ -24,6 +24,50 @@ function convertLatexShortcuts(text) {
 	return text;
 }
 
+function clampCaretIndex(text) {
+	if(caretIndex < 0) {
+		caretIndex = 0;
+	} else if(caretIndex > text.length) {
+		caretIndex = text.length;
+	}
+}
+
+function getCaretDisplayInfo(originalText, index) {
+	var before = originalText.substring(0, index);
+	var displayBefore = convertLatexShortcuts(before);
+	var lines = displayBefore.split('\n');
+	return {
+		'lineIndex': lines.length - 1,
+		'lineText': lines[lines.length - 1]
+	};
+}
+
+function getCaretLineAndColumn(originalText, index) {
+	var lines = originalText.split('\n');
+	var remaining = index;
+	for(var i = 0; i < lines.length; i++) {
+		if(remaining <= lines[i].length) {
+			return { 'lineIndex': i, 'column': remaining };
+		}
+		remaining -= lines[i].length + 1;
+	}
+	return { 'lineIndex': lines.length - 1, 'column': lines[lines.length - 1].length };
+}
+
+function getCaretIndexFromLineColumn(originalText, lineIndex, column) {
+	var lines = originalText.split('\n');
+	if(lines.length === 0) {
+		return 0;
+	}
+	lineIndex = Math.max(0, Math.min(lineIndex, lines.length - 1));
+	column = Math.max(0, Math.min(column, lines[lineIndex].length));
+	var index = 0;
+	for(var i = 0; i < lineIndex; i++) {
+		index += lines[i].length + 1;
+	}
+	return index + column;
+}
+
 function textToXML(text) {
 	text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 	var result = '';
@@ -91,8 +135,12 @@ function drawText(c, originalText, x, y, angleOrNull, isSelected) {
 			c.fillText(lines[i], lineX, baseY + i * lineHeight + 6);
 		}
 		if(isSelected && caretVisible && canvasHasFocus() && document.hasFocus()) {
-			var caretX = x + (width - widths[widths.length - 1]) / 2 + widths[widths.length - 1];
-			var caretY = baseY + (lines.length - 1) * lineHeight;
+			clampCaretIndex(originalText);
+			var caretInfo = getCaretDisplayInfo(originalText, caretIndex);
+			var lineIndex = Math.max(0, Math.min(caretInfo.lineIndex, lines.length - 1));
+			var lineX = x + (width - widths[lineIndex]) / 2;
+			var caretX = lineX + c.measureText(caretInfo.lineText).width;
+			var caretY = baseY + lineIndex * lineHeight;
 			c.beginPath();
 			c.moveTo(caretX, caretY - 10);
 			c.lineTo(caretX, caretY + 10);
@@ -103,12 +151,21 @@ function drawText(c, originalText, x, y, angleOrNull, isSelected) {
 
 var caretTimer;
 var caretVisible = true;
+var caretIndex = 0;
 var lastVersionsRender = 0;
 
 function resetCaret() {
 	clearInterval(caretTimer);
 	caretTimer = setInterval('caretVisible = !caretVisible; draw()', 500);
 	caretVisible = true;
+}
+
+function setCaretToEnd() {
+	if(selectedObject != null && 'text' in selectedObject) {
+		caretIndex = selectedObject.text.length;
+	} else {
+		caretIndex = 0;
+	}
 }
 
 var canvas;
@@ -204,6 +261,7 @@ window.onload = function() {
 		originalClick = mouse;
 
 		if(selectedObject != null) {
+			setCaretToEnd();
 			if(shift && selectedObject instanceof Node) {
 				currentLink = new SelfLink(selectedObject, mouse);
 			} else {
@@ -237,6 +295,7 @@ window.onload = function() {
 		if(selectedObject == null) {
 			selectedObject = new Node(mouse.x, mouse.y);
 			nodes.push(selectedObject);
+			setCaretToEnd();
 			resetCaret();
 			draw();
 		} else if(selectedObject instanceof Node) {
@@ -288,6 +347,7 @@ window.onload = function() {
 			if(!(currentLink instanceof TemporaryLink)) {
 				selectedObject = currentLink;
 				links.push(currentLink);
+				setCaretToEnd();
 				resetCaret();
 			}
 			currentLink = null;
@@ -300,6 +360,7 @@ var shift = false;
 
 document.onkeydown = function(e) {
 	var key = crossBrowserKey(e);
+	var hasTextSelection = selectedObject != null && 'text' in selectedObject;
 
 	if(key == 16) {
 		shift = true;
@@ -307,9 +368,10 @@ document.onkeydown = function(e) {
 		// don't read keystrokes when other things have focus
 		return true;
 	} else if(key == 13) { // enter key
-		if(selectedObject != null && 'text' in selectedObject) {
+		if(hasTextSelection) {
 			if(shift) {
-				selectedObject.text += '\n';
+				selectedObject.text = selectedObject.text.substr(0, caretIndex) + '\n' + selectedObject.text.substr(caretIndex);
+				caretIndex += 1;
 				resetCaret();
 				draw();
 			} else {
@@ -318,11 +380,33 @@ document.onkeydown = function(e) {
 			}
 		}
 		return false;
+	} else if((key == 37 || key == 39 || key == 36 || key == 35 || key == 38 || key == 40) && hasTextSelection) {
+		var text = selectedObject.text;
+		if(key == 37) { // left
+			caretIndex -= 1;
+		} else if(key == 39) { // right
+			caretIndex += 1;
+		} else if(key == 36) { // home
+			caretIndex = 0;
+		} else if(key == 35) { // end
+			caretIndex = text.length;
+		} else if(key == 38 || key == 40) { // up/down
+			var caretLine = getCaretLineAndColumn(text, caretIndex);
+			var nextLine = caretLine.lineIndex + (key == 38 ? -1 : 1);
+			caretIndex = getCaretIndexFromLineColumn(text, nextLine, caretLine.column);
+		}
+		clampCaretIndex(text);
+		resetCaret();
+		draw();
+		return false;
 	} else if(key == 8) { // backspace key
-		if(selectedObject != null && 'text' in selectedObject) {
-			selectedObject.text = selectedObject.text.substr(0, selectedObject.text.length - 1);
-			resetCaret();
-			draw();
+		if(hasTextSelection) {
+			if(caretIndex > 0) {
+				selectedObject.text = selectedObject.text.substr(0, caretIndex - 1) + selectedObject.text.substr(caretIndex);
+				caretIndex -= 1;
+				resetCaret();
+				draw();
+			}
 		}
 
 		// backspace is a shortcut for the back button, but do NOT want to change pages
@@ -363,7 +447,11 @@ document.onkeypress = function(e) {
 		// handled in keydown (Shift+Enter for newline, Enter to finish editing)
 		return false;
 	} else if(key >= 0x20 && key <= 0x7E && !e.metaKey && !e.altKey && !e.ctrlKey && selectedObject != null && 'text' in selectedObject) {
-		selectedObject.text += String.fromCharCode(key);
+		var text = selectedObject.text;
+		clampCaretIndex(text);
+		var insert = String.fromCharCode(key);
+		selectedObject.text = text.substr(0, caretIndex) + insert + text.substr(caretIndex);
+		caretIndex += insert.length;
 		resetCaret();
 		draw();
 
