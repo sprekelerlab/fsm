@@ -203,12 +203,25 @@ function consumeDefaultName(versions) {
 }
 
 function createVersionEntry(name, backup, createdAt) {
+	var now = createdAt || Date.now();
 	return {
 		'id': generateId(),
 		'name': name,
-		'createdAt': createdAt || Date.now(),
+		'createdAt': now,
+		'lastSavedAt': now,
 		'backup': backup,
 	};
+}
+
+function getCurrentVersionEntry() {
+	var versions = getSavedVersions();
+	var currentId = getCurrentVersionId();
+	for(var i = 0; i < versions.length; i++) {
+		if(versions[i].id === currentId) {
+			return versions[i];
+		}
+	}
+	return null;
 }
 
 function readLegacyBackup() {
@@ -273,12 +286,14 @@ function saveBackup() {
 	for(var i = 0; i < versions.length; i++) {
 		if(versions[i].id === current.id) {
 			versions[i].backup = backup;
+			versions[i].lastSavedAt = Date.now();
 			updated = true;
 			break;
 		}
 	}
 	if(!updated) {
 		current.backup = backup;
+		current.lastSavedAt = Date.now();
 		versions.push(current);
 		setCurrentVersionId(current.id);
 	}

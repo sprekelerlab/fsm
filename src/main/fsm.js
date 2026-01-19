@@ -103,6 +103,7 @@ function drawText(c, originalText, x, y, angleOrNull, isSelected) {
 
 var caretTimer;
 var caretVisible = true;
+var lastVersionsRender = 0;
 
 function resetCaret() {
 	clearInterval(caretTimer);
@@ -150,6 +151,16 @@ function drawUsing(c) {
 function draw() {
 	drawUsing(canvas.getContext('2d'));
 	saveBackup();
+	maybeRefreshSavedVersions();
+}
+
+function maybeRefreshSavedVersions() {
+	var now = Date.now();
+	if(now - lastVersionsRender < 1000) {
+		return;
+	}
+	lastVersionsRender = now;
+	renderSavedVersions();
 }
 
 function selectObject(x, y) {
@@ -431,7 +442,7 @@ function renderSavedVersions() {
 	if(versions.length === 0) {
 		var empty = document.createElement('li');
 		empty.className = 'versions-empty';
-		empty.textContent = 'No saved automata yet.';
+		empty.textContent = 'Keine gespeicherten Automaten.';
 		list.appendChild(empty);
 		return;
 	}
@@ -443,12 +454,13 @@ function renderSavedVersions() {
 
 		var meta = document.createElement('span');
 		meta.className = 'version-meta';
-		meta.textContent = entry.name + ' (' + formatTimestamp(entry.createdAt) + ')';
+		var savedAt = entry.lastSavedAt || entry.createdAt;
+		meta.textContent = entry.name + ' (zuletzt gespeichert: ' + formatTimestamp(savedAt) + ')';
 
 		var loadButton = document.createElement('button');
 		loadButton.className = 'version-load';
 		loadButton.type = 'button';
-		loadButton.textContent = 'Load';
+		loadButton.textContent = 'Laden';
 		loadButton.onclick = (function(id) {
 			return function() {
 				saveBackup();
@@ -456,6 +468,7 @@ function renderSavedVersions() {
 				if(loaded) {
 					draw();
 				}
+				updateCurrentNameInput();
 				renderSavedVersions();
 			};
 		})(entry.id);
@@ -463,12 +476,13 @@ function renderSavedVersions() {
 		var renameButton = document.createElement('button');
 		renameButton.className = 'version-rename';
 		renameButton.type = 'button';
-		renameButton.textContent = 'Rename';
+		renameButton.textContent = 'Umbenennen';
 		renameButton.onclick = (function(id, name) {
 			return function() {
-				var updated = prompt('Rename automaton:', name || '');
+				var updated = prompt('Automat umbenennen:', name || '');
 				if(updated !== null) {
 					renameSavedVersion(id, updated);
+					updateCurrentNameInput();
 					renderSavedVersions();
 				}
 			};
@@ -477,7 +491,7 @@ function renderSavedVersions() {
 		var duplicateButton = document.createElement('button');
 		duplicateButton.className = 'version-duplicate';
 		duplicateButton.type = 'button';
-		duplicateButton.textContent = 'Duplicate';
+		duplicateButton.textContent = 'Duplizieren';
 		duplicateButton.onclick = (function(id) {
 			return function() {
 				duplicateSavedVersion(id);
@@ -488,13 +502,16 @@ function renderSavedVersions() {
 		var deleteButton = document.createElement('button');
 		deleteButton.className = 'version-delete';
 		deleteButton.type = 'button';
-		deleteButton.textContent = 'Delete';
+		deleteButton.textContent = 'Löschen';
 		deleteButton.onclick = (function(id, name) {
 			return function() {
-				var label = name ? '"' + name + '"' : 'this version';
-				if(confirm('Delete ' + label + '? This cannot be undone.')) {
+				var message = name
+					? 'Automat "' + name + '" löschen? Dies kann nicht rückgängig gemacht werden.'
+					: 'Diesen Automaten löschen? Dies kann nicht rückgängig gemacht werden.';
+				if(confirm(message)) {
 					deleteSavedVersion(id);
 					draw();
+					updateCurrentNameInput();
 					renderSavedVersions();
 				}
 			};
@@ -509,20 +526,53 @@ function renderSavedVersions() {
 	}
 }
 
+function updateCurrentNameInput() {
+	var input = document.getElementById('current-name');
+	if(!input) {
+		return;
+	}
+	var current = getCurrentVersionEntry();
+	if(current) {
+		input.value = current.name;
+	} else {
+		input.value = '';
+	}
+}
+
 function initVersioningUI() {
 	var newButton = document.getElementById('new-automaton');
+	var nameInput = document.getElementById('current-name');
 
 	if(!newButton) {
 		return;
+	}
+
+	if(nameInput) {
+		nameInput.onchange = function() {
+			var current = getCurrentVersionEntry();
+			if(current) {
+				renameSavedVersion(current.id, nameInput.value);
+				updateCurrentNameInput();
+				renderSavedVersions();
+			}
+		};
+		nameInput.onkeydown = function(e) {
+			if(crossBrowserKey(e) == 13) {
+				nameInput.blur();
+				return false;
+			}
+		};
 	}
 
 	newButton.onclick = function() {
 		saveBackup();
 		createNewAutomaton();
 		clearCanvas();
+		updateCurrentNameInput();
 		renderSavedVersions();
 	};
 
+	updateCurrentNameInput();
 	renderSavedVersions();
 }
 

@@ -1,6 +1,6 @@
 <!doctype html>
-<html><head>
-	<title>Finite State Machine Designer - by Evan Wallace</title>
+<html lang="de"><head>
+	<title>Automaten-Designer</title>
   <meta charset="utf-8">
 	<style>
 
@@ -12,7 +12,22 @@ body {
 }
 
 h1 {
-	font: bold italic 50px Georgia, serif;
+	font: bold 32px Georgia, serif;
+	margin-bottom: 10px;
+}
+
+h1 label {
+	margin-right: 8px;
+}
+
+h1 input {
+	font: inherit;
+	font-weight: normal;
+	font-style: normal;
+	padding: 2px 6px;
+	border: 1px solid #bbb;
+	border-radius: 6px;
+}
 }
 
 canvas {
@@ -139,33 +154,38 @@ if (typeof btoa == 'undefined') {
 
 	</script>
 </head><body>
-	<h1>Finite State Machine Designer</h1>
+	<h1><label for="current-name">Automat:</label><input id="current-name" type="text" aria-label="Automatenname"></h1>
 	<canvas id="canvas" width="800" height="600">
 		<span class="error">Your browser does not support<br>the HTML5 &lt;canvas&gt; element</span>
 	</canvas>
 	<div>
-		<p class="center">Export as: <a href="javascript:saveAsPNG()">PNG</a> | <a href="javascript:saveAsSVG()">SVG</a> | <a href="javascript:saveAsLaTeX()">LaTeX</a></p>
+		<p class="center">Exportieren als: <a href="javascript:saveAsPNG()">PNG</a> | <a href="javascript:saveAsSVG()">SVG</a> | <a href="javascript:saveAsLaTeX()">LaTeX</a></p>
 		<section class="versions">
-			<h2>Saved automata</h2>
+			<h2>Gespeicherte Automaten</h2>
 			<div class="version-controls">
-				<button id="new-automaton" type="button">New automaton</button>
+				<button id="new-automaton" type="button">Neuer Automat</button>
 			</div>
 			<ul id="versions-list" class="versions-list"></ul>
-			<p class="versions-note">Autosaved in this browser only.</p>
 		</section>
 		<textarea id="output"></textarea>
-		<p>The big white box above is the FSM designer.&nbsp; Here's how to use it:</p>
+		<p>Dieses Automaten-Tool ist eine Erweiterung des ISIS-Tool zum Zeichnen von DFAs und NFAs, mit folgenden zusätzlichen Optionen zum Zeichnen von Kellerautomaten und Turingmaschinen:</p>
 		<ul>
-			<li><b>Add a state:</b> double-click on the canvas</li>
-			<li><b>Add an arrow:</b> shift-drag on the canvas</li>
-			<li><b>Move something:</b> drag it around</li>
-			<li><b>Delete something:</b> click it and press the delete key (not the backspace key)</li>
-		</ul><ul>
-			<li><b>Make accept state:</b> double-click on an existing state</li>
-			<li><b>Type numeric subscript:</b> put an underscore before the number (like "S_0")</li>
-			<li><b>Type greek letter:</b> put a backslash before it (like "\beta")</li>
+			<li><b>Übergangspfeil mit mehreren Übergängen beschriften:</b> Shift + Enter um Zeilenumbruch einzufügen</li>
+			<li><b>Blank Symbol einfügen:</b> Schreiben Sie \blank (□), um das Blank-Symbol einzufügen</li>
+			<li><b>Griechische Buchstaben:</b> z.B. \lambda (λ)</li>
 		</ul>
-		<p>This was made in HTML5 and JavaScript using the canvas element.</p>
+		<p>Hier nochmal die übrige Kurzanleitung zum Erstellen des Automaten:</p>
+		<ul>
+			<li><b>Zustand erstellen:</b> Doppelklick</li>
+			<li><b>Zustand in Endzustand oder Nicht-Endzustand ändern:</b> Doppelklick auf Zustand</li>
+			<li><b>Zustand benennen:</b> in Zustand klicken und "z_i" eingeben für Zustand zᵢ</li>
+			<li><b>Startpfeil hinzufügen:</b> Umschalttaste + klicken und auf gewünschten Zustand ziehen</li>
+			<li><b>Übergang hinzufügen:</b> Umschalttaste + auf Zustand klicken und auf Zielzustand ziehen</li>
+			<li><b>Übergang beschriften:</b> auf Pfeil klicken und gewünschten Text eingeben (z.B. 0 oder 1)</li>
+			<li><b>Übergangspfeil mit mehreren Übergängen beschriften:</b> Shift + Enter um Zeilenumbruch einzufügen</li>
+			<li><b>Löschen:</b> auf Pfeil/Zustand klicken und "entf"/"delete"/"backspace"/"fn+delete" klicken</li>
+			<li><b>Blank Symbol einfügen:</b> Schreiben Sie \blank (□), um das Blank-Symbol einzufügen</li>
+			<li><b>Griechische Buchstaben:</b> z.B. \lambda (λ)</li>
+		</ul>
 	</div>
-	<p>Created by <a href="http://madebyevan.com/">Evan Wallace</a> in 2010</p>
 </body></html>
