@@ -1,4 +1,7 @@
 var FSM_VERSIONS_KEY = 'fsm:versions';
+var FSM_CURRENT_KEY = 'fsm:current';
+var FSM_NEXT_ID_KEY = 'fsm:nextId';
+var LEGACY_BACKUP_KEY = 'fsm';
 
 function hasLocalStorage() {
 	return !!(localStorage && JSON);
@@ -56,6 +59,17 @@ function createBackup() {
 	return backup;
 }
 
+function emptyBackup() {
+	return {
+		'nodes': [],
+		'links': [],
+	};
+}
+
+function cloneBackup(backup) {
+	return JSON.parse(JSON.stringify(backup));
+}
+
 function applyBackup(backup) {
 	nodes.length = 0;
 	links.length = 0;
@@ -99,28 +113,6 @@ function applyBackup(backup) {
 	}
 }
 
-function restoreBackup() {
-	if(!hasLocalStorage()) {
-		return;
-	}
-
-	try {
-		var backup = JSON.parse(localStorage['fsm']);
-		applyBackup(backup);
-	} catch(e) {
-		localStorage['fsm'] = '';
-	}
-}
-
-function saveBackup() {
-	if(!hasLocalStorage()) {
-		return;
-	}
-
-	var backup = createBackup();
-	localStorage['fsm'] = JSON.stringify(backup);
-}
-
 function pad2(value) {
 	return value < 10 ? '0' + value : '' + value;
 }
@@ -129,14 +121,6 @@ function formatTimestamp(ms) {
 	var date = new Date(ms);
 	return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate()) + ' ' +
 		pad2(date.getHours()) + ':' + pad2(date.getMinutes());
-}
-
-function defaultVersionName() {
-	return 'Version ' + formatTimestamp(Date.now());
-}
-
-function isBackupEmpty(backup) {
-	return !backup || (backup.nodes.length === 0 && backup.links.length === 0);
 }
 
 function getSavedVersions() {
@@ -163,60 +147,245 @@ function setSavedVersions(versions) {
 	localStorage[FSM_VERSIONS_KEY] = JSON.stringify(versions);
 }
 
-function saveCurrentVersion(name, options) {
+function getCurrentVersionId() {
 	if(!hasLocalStorage()) {
 		return null;
 	}
-	var backup = createBackup();
-	if(!options || options.allowEmpty !== true) {
-		if(isBackupEmpty(backup)) {
-			return null;
+	return localStorage[FSM_CURRENT_KEY] || null;
+}
+
+function setCurrentVersionId(id) {
+	if(!hasLocalStorage()) {
+		return;
+	}
+	localStorage[FSM_CURRENT_KEY] = id;
+}
+
+function generateId() {
+	return String(Date.now()) + '-' + Math.floor(Math.random() * 1000000);
+}
+
+function findLatestVersion(versions) {
+	var latest = null;
+	for(var i = 0; i < versions.length; i++) {
+		if(!latest || (versions[i].createdAt || 0) > (latest.createdAt || 0)) {
+			latest = versions[i];
 		}
 	}
-	var now = Date.now();
-	var entry = {
-		'id': String(now) + '-' + Math.floor(Math.random() * 1000000),
-		'name': name && name.trim() ? name.trim() : defaultVersionName(),
-		'createdAt': now,
+	return latest;
+}
+
+function getNextAutomatNumber(versions) {
+	if(!hasLocalStorage()) {
+		return 1;
+	}
+	var raw = parseInt(localStorage[FSM_NEXT_ID_KEY], 10);
+	if(!isNaN(raw) && raw > 0) {
+		return raw;
+	}
+	var max = 0;
+	for(var i = 0; i < versions.length; i++) {
+		var match = /^Automat\s+(\d+)$/.exec(versions[i].name || '');
+		if(match) {
+			max = Math.max(max, parseInt(match[1], 10));
+		}
+	}
+	max = Math.max(max, versions.length);
+	return max + 1;
+}
+
+function consumeDefaultName(versions) {
+	var next = getNextAutomatNumber(versions);
+	if(hasLocalStorage()) {
+		localStorage[FSM_NEXT_ID_KEY] = String(next + 1);
+	}
+	return 'Automat ' + next;
+}
+
+function createVersionEntry(name, backup, createdAt) {
+	return {
+		'id': generateId(),
+		'name': name,
+		'createdAt': createdAt || Date.now(),
 		'backup': backup,
 	};
+}
+
+function readLegacyBackup() {
+	if(!hasLocalStorage()) {
+		return null;
+	}
+	var raw = localStorage[LEGACY_BACKUP_KEY];
+	if(!raw) {
+		return null;
+	}
+	try {
+		var backup = JSON.parse(raw);
+		if(backup && backup.nodes && backup.links) {
+			return backup;
+		}
+	} catch(e) {
+	}
+	return null;
+}
+
+function ensureCurrentVersion() {
+	if(!hasLocalStorage()) {
+		return null;
+	}
 	var versions = getSavedVersions();
+	var currentId = getCurrentVersionId();
+	for(var i = 0; i < versions.length; i++) {
+		if(versions[i].id === currentId) {
+			return versions[i];
+		}
+	}
+	if(versions.length === 0) {
+		var legacy = readLegacyBackup();
+		var name = consumeDefaultName(versions);
+		var entry = createVersionEntry(name, legacy || emptyBackup());
+		versions.push(entry);
+		setSavedVersions(versions);
+		setCurrentVersionId(entry.id);
+		if(legacy) {
+			localStorage[LEGACY_BACKUP_KEY] = '';
+		}
+		return entry;
+	}
+	var latest = findLatestVersion(versions);
+	if(latest) {
+		setCurrentVersionId(latest.id);
+	}
+	return latest;
+}
+
+function saveBackup() {
+	if(!hasLocalStorage()) {
+		return;
+	}
+	var current = ensureCurrentVersion();
+	if(!current) {
+		return;
+	}
+	var versions = getSavedVersions();
+	var backup = createBackup();
+	var updated = false;
+	for(var i = 0; i < versions.length; i++) {
+		if(versions[i].id === current.id) {
+			versions[i].backup = backup;
+			updated = true;
+			break;
+		}
+	}
+	if(!updated) {
+		current.backup = backup;
+		versions.push(current);
+		setCurrentVersionId(current.id);
+	}
+	setSavedVersions(versions);
+}
+
+function restoreBackup() {
+	if(!hasLocalStorage()) {
+		return;
+	}
+	var current = ensureCurrentVersion();
+	if(current) {
+		applyBackup(current.backup);
+	}
+}
+
+function createNewAutomaton() {
+	if(!hasLocalStorage()) {
+		return null;
+	}
+	var versions = getSavedVersions();
+	var entry = createVersionEntry(consumeDefaultName(versions), emptyBackup());
 	versions.push(entry);
 	setSavedVersions(versions);
+	setCurrentVersionId(entry.id);
 	return entry;
 }
 
-function deleteSavedVersion(id) {
-	var versions = getSavedVersions();
-	var filtered = [];
-	for(var i = 0; i < versions.length; i++) {
-		if(versions[i].id !== id) {
-			filtered.push(versions[i]);
-		}
+function renameSavedVersion(id, name) {
+	if(!name || !name.trim()) {
+		return null;
 	}
-	setSavedVersions(filtered);
-}
-
-function loadSavedVersion(id) {
 	var versions = getSavedVersions();
 	for(var i = 0; i < versions.length; i++) {
 		if(versions[i].id === id) {
-			applyBackup(versions[i].backup);
+			versions[i].name = name.trim();
+			setSavedVersions(versions);
 			return versions[i];
 		}
 	}
 	return null;
 }
 
-function loadLatestVersion() {
+function getCopyName(baseName, versions) {
+	var names = {};
+	for(var i = 0; i < versions.length; i++) {
+		names[versions[i].name] = true;
+	}
+	var candidate = baseName + ' (copy)';
+	if(!names[candidate]) {
+		return candidate;
+	}
+	var index = 2;
+	while(names[baseName + ' (copy ' + index + ')']) {
+		index += 1;
+	}
+	return baseName + ' (copy ' + index + ')';
+}
+
+function duplicateSavedVersion(id) {
 	var versions = getSavedVersions();
-	if(versions.length === 0) {
+	for(var i = 0; i < versions.length; i++) {
+		if(versions[i].id === id) {
+			var name = getCopyName(versions[i].name, versions);
+			var entry = createVersionEntry(name, cloneBackup(versions[i].backup));
+			versions.push(entry);
+			setSavedVersions(versions);
+			return entry;
+		}
+	}
+	return null;
+}
+
+function deleteSavedVersion(id) {
+	var versions = getSavedVersions();
+	var filtered = [];
+	var wasCurrent = id === getCurrentVersionId();
+	for(var i = 0; i < versions.length; i++) {
+		if(versions[i].id !== id) {
+			filtered.push(versions[i]);
+		}
+	}
+	setSavedVersions(filtered);
+	if(!wasCurrent) {
 		return null;
 	}
-	versions.sort(function(a, b) {
-		return b.createdAt - a.createdAt;
-	});
-	var latest = versions[0];
-	applyBackup(latest.backup);
-	return latest;
+	if(filtered.length === 0) {
+		var entry = createNewAutomaton();
+		applyBackup(entry.backup);
+		return entry;
+	}
+	var next = findLatestVersion(filtered);
+	if(next) {
+		setCurrentVersionId(next.id);
+		applyBackup(next.backup);
+	}
+	return next;
+}
+
+function loadSavedVersion(id) {
+	var versions = getSavedVersions();
+	for(var i = 0; i < versions.length; i++) {
+		if(versions[i].id === id) {
+			setCurrentVersionId(id);
+			applyBackup(versions[i].backup);
+			return versions[i];
+		}
+	}
+	return null;
 }

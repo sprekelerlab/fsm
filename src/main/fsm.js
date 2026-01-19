@@ -451,10 +451,36 @@ function renderSavedVersions() {
 		loadButton.textContent = 'Load';
 		loadButton.onclick = (function(id) {
 			return function() {
+				saveBackup();
 				var loaded = loadSavedVersion(id);
 				if(loaded) {
 					draw();
 				}
+				renderSavedVersions();
+			};
+		})(entry.id);
+
+		var renameButton = document.createElement('button');
+		renameButton.className = 'version-rename';
+		renameButton.type = 'button';
+		renameButton.textContent = 'Rename';
+		renameButton.onclick = (function(id, name) {
+			return function() {
+				var updated = prompt('Rename automaton:', name || '');
+				if(updated !== null) {
+					renameSavedVersion(id, updated);
+					renderSavedVersions();
+				}
+			};
+		})(entry.id, entry.name);
+
+		var duplicateButton = document.createElement('button');
+		duplicateButton.className = 'version-duplicate';
+		duplicateButton.type = 'button';
+		duplicateButton.textContent = 'Duplicate';
+		duplicateButton.onclick = (function(id) {
+			return function() {
+				duplicateSavedVersion(id);
 				renderSavedVersions();
 			};
 		})(entry.id);
@@ -468,6 +494,7 @@ function renderSavedVersions() {
 				var label = name ? '"' + name + '"' : 'this version';
 				if(confirm('Delete ' + label + '? This cannot be undone.')) {
 					deleteSavedVersion(id);
+					draw();
 					renderSavedVersions();
 				}
 			};
@@ -475,48 +502,25 @@ function renderSavedVersions() {
 
 		item.appendChild(meta);
 		item.appendChild(loadButton);
+		item.appendChild(renameButton);
+		item.appendChild(duplicateButton);
 		item.appendChild(deleteButton);
 		list.appendChild(item);
 	}
 }
 
 function initVersioningUI() {
-	var nameInput = document.getElementById('version-name');
-	var saveButton = document.getElementById('save-version');
-	var newButton = document.getElementById('new-version');
-	var latestButton = document.getElementById('load-latest');
+	var newButton = document.getElementById('new-automaton');
 
-	if(!nameInput || !saveButton || !newButton || !latestButton) {
+	if(!newButton) {
 		return;
 	}
 
-	saveButton.onclick = function() {
-		var saved = saveCurrentVersion(nameInput.value);
-		if(saved) {
-			nameInput.value = '';
-			renderSavedVersions();
-		} else {
-			alert('Nothing to save yet.');
-		}
-	};
-
 	newButton.onclick = function() {
-		var saved = saveCurrentVersion(nameInput.value);
-		if(saved) {
-			nameInput.value = '';
-		}
+		saveBackup();
+		createNewAutomaton();
 		clearCanvas();
 		renderSavedVersions();
-	};
-
-	latestButton.onclick = function() {
-		var loaded = loadLatestVersion();
-		if(loaded) {
-			draw();
-			renderSavedVersions();
-		} else {
-			alert('No saved versions yet.');
-		}
 	};
 
 	renderSavedVersions();

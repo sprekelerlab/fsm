@@ -71,11 +71,6 @@ textarea {
 	max-width: none;
 }
 
-.version-controls input {
-	padding: 4px 6px;
-	font: 14px/18px 'Lucida Grande', 'Segoe UI', sans-serif;
-}
-
 .versions-list {
 	list-style: none;
 	padding: 0;
@@ -153,14 +148,10 @@ if (typeof btoa == 'undefined') {
 		<section class="versions">
 			<h2>Saved automata</h2>
 			<div class="version-controls">
-				<label for="version-name">Version name</label>
-				<input id="version-name" type="text" placeholder="Question 1">
-				<button id="save-version" type="button">Save version</button>
-				<button id="new-version" type="button">New drawing</button>
-				<button id="load-latest" type="button">Load latest</button>
+				<button id="new-automaton" type="button">New automaton</button>
 			</div>
 			<ul id="versions-list" class="versions-list"></ul>
-			<p class="versions-note">Saved in this browser only.</p>
+			<p class="versions-note">Autosaved in this browser only.</p>
 		</section>
 		<textarea id="output"></textarea>
 		<p>The big white box above is the FSM designer.&nbsp; Here's how to use it:</p>
