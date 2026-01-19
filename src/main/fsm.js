@@ -184,6 +184,7 @@ window.onload = function() {
 	canvas = document.getElementById('canvas');
 	restoreBackup();
 	draw();
+	initVersioningUI();
 
 	canvas.onmousedown = function(e) {
 		var mouse = crossBrowserRelativeMousePos(e);
@@ -401,6 +402,124 @@ function output(text) {
 	var element = document.getElementById('output');
 	element.style.display = 'block';
 	element.value = text;
+}
+
+function clearCanvas() {
+	nodes.length = 0;
+	links.length = 0;
+	selectedObject = null;
+	currentLink = null;
+	movingObject = false;
+	draw();
+}
+
+function renderSavedVersions() {
+	var list = document.getElementById('versions-list');
+	if(!list) {
+		return;
+	}
+
+	while(list.firstChild) {
+		list.removeChild(list.firstChild);
+	}
+
+	var versions = getSavedVersions();
+	versions.sort(function(a, b) {
+		return b.createdAt - a.createdAt;
+	});
+
+	if(versions.length === 0) {
+		var empty = document.createElement('li');
+		empty.className = 'versions-empty';
+		empty.textContent = 'No saved automata yet.';
+		list.appendChild(empty);
+		return;
+	}
+
+	for(var i = 0; i < versions.length; i++) {
+		var entry = versions[i];
+		var item = document.createElement('li');
+		item.className = 'version-item';
+
+		var meta = document.createElement('span');
+		meta.className = 'version-meta';
+		meta.textContent = entry.name + ' (' + formatTimestamp(entry.createdAt) + ')';
+
+		var loadButton = document.createElement('button');
+		loadButton.className = 'version-load';
+		loadButton.type = 'button';
+		loadButton.textContent = 'Load';
+		loadButton.onclick = (function(id) {
+			return function() {
+				var loaded = loadSavedVersion(id);
+				if(loaded) {
+					draw();
+				}
+				renderSavedVersions();
+			};
+		})(entry.id);
+
+		var deleteButton = document.createElement('button');
+		deleteButton.className = 'version-delete';
+		deleteButton.type = 'button';
+		deleteButton.textContent = 'Delete';
+		deleteButton.onclick = (function(id, name) {
+			return function() {
+				var label = name ? '"' + name + '"' : 'this version';
+				if(confirm('Delete ' + label + '? This cannot be undone.')) {
+					deleteSavedVersion(id);
+					renderSavedVersions();
+				}
+			};
+		})(entry.id, entry.name);
+
+		item.appendChild(meta);
+		item.appendChild(loadButton);
+		item.appendChild(deleteButton);
+		list.appendChild(item);
+	}
+}
+
+function initVersioningUI() {
+	var nameInput = document.getElementById('version-name');
+	var saveButton = document.getElementById('save-version');
+	var newButton = document.getElementById('new-version');
+	var latestButton = document.getElementById('load-latest');
+
+	if(!nameInput || !saveButton || !newButton || !latestButton) {
+		return;
+	}
+
+	saveButton.onclick = function() {
+		var saved = saveCurrentVersion(nameInput.value);
+		if(saved) {
+			nameInput.value = '';
+			renderSavedVersions();
+		} else {
+			alert('Nothing to save yet.');
+		}
+	};
+
+	newButton.onclick = function() {
+		var saved = saveCurrentVersion(nameInput.value);
+		if(saved) {
+			nameInput.value = '';
+		}
+		clearCanvas();
+		renderSavedVersions();
+	};
+
+	latestButton.onclick = function() {
+		var loaded = loadLatestVersion();
+		if(loaded) {
+			draw();
+			renderSavedVersions();
+		} else {
+			alert('No saved versions yet.');
+		}
+	};
+
+	renderSavedVersions();
 }
 
 function saveAsPNG() {

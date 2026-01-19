@@ -58,6 +58,53 @@ textarea {
 	margin: 0 auto;
 }
 
+.versions {
+	margin: 20px 0;
+}
+
+.version-controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+	margin: 0;
+	max-width: none;
+}
+
+.version-controls input {
+	padding: 4px 6px;
+	font: 14px/18px 'Lucida Grande', 'Segoe UI', sans-serif;
+}
+
+.versions-list {
+	list-style: none;
+	padding: 0;
+	margin: 15px 0;
+}
+
+.version-item {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	padding: 6px 0;
+	border-bottom: 1px solid #ccc;
+}
+
+.version-meta {
+	flex: 1;
+}
+
+.versions-empty {
+	color: #555;
+	font-style: italic;
+}
+
+.versions-note {
+	color: #555;
+	font-size: 12px;
+	margin-top: 10px;
+}
+
   </style>
 	<script src="fsm.js"></script>
 	<script>
@@ -103,6 +150,18 @@ if (typeof btoa == 'undefined') {
 	</canvas>
 	<div>
 		<p class="center">Export as: <a href="javascript:saveAsPNG()">PNG</a> | <a href="javascript:saveAsSVG()">SVG</a> | <a href="javascript:saveAsLaTeX()">LaTeX</a></p>
+		<section class="versions">
+			<h2>Saved automata</h2>
+			<div class="version-controls">
+				<label for="version-name">Version name</label>
+				<input id="version-name" type="text" placeholder="Question 1">
+				<button id="save-version" type="button">Save version</button>
+				<button id="new-version" type="button">New drawing</button>
+				<button id="load-latest" type="button">Load latest</button>
+			</div>
+			<ul id="versions-list" class="versions-list"></ul>
+			<p class="versions-note">Saved in this browser only.</p>
+		</section>
 		<textarea id="output"></textarea>
 		<p>The big white box above is the FSM designer.&nbsp; Here's how to use it:</p>
 		<ul>
